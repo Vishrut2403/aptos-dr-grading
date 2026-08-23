@@ -1,0 +1,22 @@
+# Install into a virtual environment:
+#     python3 -m venv .venv
+#     .venv/bin/python -m pip install -r requirements.txt
+#
+# torch and torchvision must be resolved together. Installing them separately
+# can give you a mismatched pair, which fails at import with
+# "operator torchvision::nms does not exist".
+#
+# The default wheels bundle CUDA on Linux. For a CPU-only machine use:
+#     pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+
+torch>=2.6
+torchvision>=0.21
+
+timm>=1.0                   # pretrained EfficientNet and ViT backbones
+scikit-learn>=1.4           # metrics and the stratified split
+pandas>=2.0
+numpy>=1.26
+opencv-python-headless>=4.9 # image decode, resize, Gaussian blur
+matplotlib>=3.8             # figures for the report
+tqdm>=4.66
+kaggle>=1.6                 # dataset download

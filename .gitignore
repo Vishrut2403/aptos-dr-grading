@@ -1,0 +1,104 @@
+# ============================================================
+# Credentials. Committing any of these leaks an account.
+# ============================================================
+kaggle.json
+access_token
+.kaggle/
+.env
+.env.*
+*.pem
+*.key
+*.token
+
+# ============================================================
+# Data. Two reasons, and the second one is the important one:
+#   1. it is far too large for git (9 GB raw, 1.1 GB cached)
+#   2. APTOS is patient medical imagery under a data-use
+#      agreement that does not permit redistribution, so
+#      pushing it would breach the licence we accepted
+# Regenerate with ./scripts/download_data.sh + src/preprocess.py
+# ============================================================
+data/*
+!data/README.md
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.zip
+*.tar
+*.tar.gz
+
+# ============================================================
+# Everything not for publication, in one place. The repository may
+# end up public, so anything that must not be published lives here:
+#   local/team.json          names and registration numbers. Personal data.
+#   local/team-docs/         who owns which model, contribution log, the
+#                            submitted synopsis. Attribution for grading comes
+#                            from git commit authorship, not from files, so
+#                            none of this needs to be in the repository.
+#   local/report-tooling/    synopsis generator and page measurer. Document
+#                            tooling, not project code.
+#   local/course-materials/  course plan, guidelines, report template.
+#                            MIT Manipal's copyright, not ours to publish.
+#   local/turnitin/          similarity reports, carry submission IDs.
+#   local/reference/         scratch copies and superseded drafts.
+#   local/logs/              download logs.
+# Nothing under src/ or scripts/ reads from local/.
+# ============================================================
+local/
+
+# ============================================================
+# Trained weights. Regenerate by running src/train.py.
+# Commit the results/*.json metrics instead; those are small,
+# diffable, and are what the comparison table is built from.
+# ============================================================
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+*.pkl
+checkpoints/
+
+# ============================================================
+# Experiment logs, if anyone adds tracking later
+# ============================================================
+runs/
+wandb/
+mlruns/
+lightning_logs/
+tensorboard/
+*.log
+
+# ============================================================
+# Environment
+# ============================================================
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# ============================================================
+# Editor and OS scratch
+# ============================================================
+.~lock.*#
+~$*.doc*
+~$*.xls*
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ============================================================
+# Deliberately tracked, because this is the evidence of our work:
+#   src/            model and pipeline code
+#   scripts/        setup, download, report generation
+#   reports/        synopsis, contribution log, generated figures
+#   results/*.json  benchmark and training metrics
+#   notebooks/      exploratory analysis
+# ============================================================
