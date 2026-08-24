@@ -22,7 +22,7 @@ APTOSDataset(npy_path, labels_csv, indices, img_size=224, train=False)
     has already removed most of the inter-camera colour variation, and piling
     more on top mostly destroys signal.
 
-class_weights(labels_csv, indices, num_classes=5, device="cuda")
+class_weights(labels_csv, indices, num_classes=5, device="cpu")
     Inverse-frequency weights normalised to mean 1, so the loss stays on a
     comparable scale to the unweighted run. Used when --balanced is passed.
 
@@ -56,5 +56,5 @@ class APTOSDataset(Dataset):
         raise NotImplementedError
 
 
-def class_weights(labels_csv, indices, num_classes=5, device="cuda"):
+def class_weights(labels_csv, indices, num_classes=5, device="cpu"):
     raise NotImplementedError("class_weights: not implemented yet")

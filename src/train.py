@@ -68,7 +68,8 @@ def main():
     a = get_args()
     torch.manual_seed(a.seed)
     np.random.seed(a.seed)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    cuda = torch.cuda.is_available()
+    device = "cuda" if cuda else "cpu"
 
     npy = os.path.join(a.data, f"images_{a.cache_size}.npy")
     csv = os.path.join(a.data, "labels.csv")
@@ -85,13 +86,14 @@ def main():
     sets = {k: APTOSDataset(npy, csv, split[k], img_size=img_size, train=(k == "train"))
             for k in ("train", "val", "test")}
     loaders = {k: DataLoader(v, batch_size=a.batch, shuffle=(k == "train"),
-                             num_workers=a.workers, pin_memory=True, drop_last=(k == "train"))
+                             num_workers=a.workers, pin_memory=cuda, drop_last=(k == "train"))
                for k, v in sets.items()}
 
     cw = class_weights(csv, split["train"], device=device) if a.balanced else None
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.wd)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=a.epochs)
-    scaler = torch.amp.GradScaler("cuda", enabled=not a.no_amp)
+    # fp16 is a CUDA-only win here; on CPU it just warns and disables itself
+    scaler = torch.amp.GradScaler("cuda", enabled=cuda and not a.no_amp)
 
     tag = f"{a.model}_{a.head}" + ("_bal" if a.balanced else "")
     os.makedirs(a.out, exist_ok=True)
