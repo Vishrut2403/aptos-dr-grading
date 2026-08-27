@@ -1,39 +1,48 @@
-"""The common evaluation protocol.
+"""The common evaluation protocol: every model is scored by this one function.
 
-Every model in the study is scored by this one function, so the comparison
-table in the report cannot drift between members. Nobody should be computing
-their own accuracy.
-
-evaluate(y_true, y_pred) -> dict with these keys:
-
-  qwk           quadratic weighted kappa, the headline metric. Penalises being
-                wrong by three grades far more than by one, which plain
-                accuracy does not. sklearn: cohen_kappa_score(weights="quadratic")
-  accuracy      plain accuracy, reported for comparison, not as the headline
-  macro_f1      unweighted mean F1 over the five grades, so the minority
-                grades count as much as No DR
-  mae           mean absolute difference between predicted and true grade
-  referable_f1  F1 on the binary question (grade >= 2), which is what decides
-                whether a patient is referred to an ophthalmologist
-  confusion     5x5 confusion matrix as a nested list, for the error analysis
-                in Objective 3
-
-Watch out: a model that predicts No DR for every image scores 49% accuracy on
-this dataset but a quadratic weighted kappa of exactly 0. Make sure the tests
-cover that case.
-
-comparison_table(results) renders the single cross-model table the report is
-graded on, from the list of result dicts written by src/train.py.
+    python -m src.metrics results
 """
 
 import numpy as np
+from sklearn.metrics import accuracy_score, cohen_kappa_score, confusion_matrix, f1_score
 
 NUM_CLASSES = 5
+LABELS = list(range(NUM_CLASSES))
 
 
 def evaluate(y_true, y_pred):
-    raise NotImplementedError("evaluate: not implemented yet")
+    """True and predicted grades, each (N,) -> the metric dict for one run."""
+    y_true = np.asarray(y_true).astype(int)
+    y_pred = np.asarray(y_pred).astype(int)
+    return {
+        # without labels= sklearn infers the set from the values present, so a
+        # split missing a grade renumbers them and changes every distance
+        "qwk": float(cohen_kappa_score(y_true, y_pred, labels=LABELS, weights="quadratic")),
+        "accuracy": float(accuracy_score(y_true, y_pred)),
+        "macro_f1": float(f1_score(y_true, y_pred, labels=LABELS, average="macro", zero_division=0)),
+        "mae": float(np.abs(y_true - y_pred).mean()),
+        "referable_f1": float(f1_score(y_true >= 2, y_pred >= 2, zero_division=0)),
+        "confusion": confusion_matrix(y_true, y_pred, labels=LABELS).tolist(),
+    }
 
 
 def comparison_table(results):
-    raise NotImplementedError("comparison_table: not implemented yet")
+    """Render the single cross-model table, from the dicts src/train.py writes."""
+    cols = ["qwk", "accuracy", "macro_f1", "mae", "referable_f1"]
+    head = f"{'model':<16}{'head':<9}{'params(M)':>10}" + "".join(f"{c:>13}" for c in cols)
+    lines = [head, "-" * len(head)]
+    for r in sorted(results, key=lambda r: -r["test"]["qwk"]):
+        t = r["test"]
+        lines.append(f"{r['args']['model']:<16}{r['args']['head']:<9}{r['params_M']:>10}"
+                     + "".join(f"{t[c]:>13.4f}" for c in cols))
+    return "\n".join(lines)
+
+
+if __name__ == "__main__":
+    import glob, json, sys
+
+    d = sys.argv[1] if len(sys.argv) > 1 else "results"
+    files = sorted(glob.glob(f"{d}/*.json"))
+    if not files:
+        sys.exit(f"no result files in {d}/")
+    print(comparison_table([json.load(open(p)) for p in files]))
