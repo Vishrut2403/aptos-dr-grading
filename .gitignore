@@ -98,7 +98,17 @@ Thumbs.db
 # Deliberately tracked, because this is the evidence of our work:
 #   src/            model and pipeline code
 #   scripts/        setup, download, report generation
-#   reports/        synopsis, contribution log, generated figures
+#   reports/        synopsis, contribution log, generated charts
 #   results/*.json  benchmark and training metrics
 #   notebooks/      exploratory analysis
 # ============================================================
+
+# ============================================================
+# Figures containing actual fundus photographs. The report they
+# go into is submitted privately to faculty, which is fine, but
+# this repository is public and these are patient images under
+# the same APTOS data-use agreement that keeps data/ untracked.
+# Regenerate locally with scripts/make_figures.py.
+# ============================================================
+reports/figures/fig1_pipeline_stages.png
+reports/figures/fig2_camera_normalisation.png
