@@ -112,3 +112,4 @@ Thumbs.db
 # ============================================================
 reports/figures/fig1_pipeline_stages.png
 reports/figures/fig2_camera_normalisation.png
+reports/*_DRAFT_*.docx
