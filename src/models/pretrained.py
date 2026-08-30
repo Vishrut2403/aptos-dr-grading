@@ -40,18 +40,17 @@ def resnet50(pretrained=True, **kw):
 
 
 def vit_small(pretrained=True, **kw):
-    """Model 4. timm name: vit_small_patch16_224"""
-    raise NotImplementedError("Model 4: not implemented yet")
+    """Model 4. 16x16 patch embedding, 12 self-attention layers, global
+    attention from the first block with none of the locality a CNN assumes."""
+    return TimmBackbone("vit_small_patch16_224", pretrained=pretrained, **kw)
 
 
 def vit_base(pretrained=True, **kw):
-    """Stretch goal for Model 4. Measured to fit 6GB at batch 32 with AMP.
-    timm name: vit_base_patch16_224"""
-    raise NotImplementedError
+    """Stretch goal for Model 4. Measured to fit 6GB at batch 32 with AMP."""
+    return TimmBackbone("vit_base_patch16_224", pretrained=pretrained, **kw)
 
 
 def deit_small(pretrained=True, **kw):
     """Fallback for Model 4: same size as ViT-S, trained with heavier
-    augmentation, which usually helps on small datasets.
-    timm name: deit_small_patch16_224"""
-    raise NotImplementedError
+    augmentation, which usually helps on small datasets."""
+    return TimmBackbone("deit_small_patch16_224", pretrained=pretrained, **kw)
