@@ -1,0 +1,81 @@
+{
+  "tag": "cnn_scratch_coral_refit",
+  "args": {
+    "model": "cnn_scratch",
+    "head": "coral_refit",
+    "data": "data/processed",
+    "cache_size": 224,
+    "epochs": 40,
+    "batch": 32,
+    "accum": 1,
+    "lr": 0.0003,
+    "wd": 0.0001,
+    "workers": 4,
+    "seed": 42,
+    "no_pretrained": false,
+    "no_amp": false,
+    "grad_ckpt": false,
+    "balanced": false,
+    "patience": 8,
+    "out": "results"
+  },
+  "best_epoch": 40,
+  "test": {
+    "qwk": 0.7742187746701513,
+    "accuracy": 0.6618181818181819,
+    "macro_f1": 0.42151577665086315,
+    "mae": 0.48,
+    "referable_f1": 0.8436830835117773,
+    "confusion": [
+      [
+        252,
+        12,
+        7,
+        0,
+        0
+      ],
+      [
+        8,
+        8,
+        37,
+        2,
+        1
+      ],
+      [
+        8,
+        14,
+        84,
+        16,
+        28
+      ],
+      [
+        1,
+        0,
+        12,
+        4,
+        12
+      ],
+      [
+        3,
+        0,
+        20,
+        5,
+        16
+      ]
+    ]
+  },
+  "thresholds": [
+    -0.8092945072272304,
+    -0.2759146778275623,
+    0.8700191437895765,
+    1.014680033775684
+  ],
+  "learned_biases": [
+    0.06585486978292465,
+    0.05582311004400253,
+    -0.06285568326711655,
+    -0.06603182107210159
+  ],
+  "params_M": 4.71,
+  "history": []
+}

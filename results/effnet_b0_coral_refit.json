@@ -1,0 +1,81 @@
+{
+  "tag": "effnet_b0_coral_refit",
+  "args": {
+    "model": "effnet_b0",
+    "head": "coral_refit",
+    "data": "data/processed",
+    "cache_size": 224,
+    "epochs": 25,
+    "batch": 32,
+    "accum": 1,
+    "lr": 0.0003,
+    "wd": 0.0001,
+    "workers": 4,
+    "seed": 42,
+    "no_pretrained": false,
+    "no_amp": false,
+    "grad_ckpt": false,
+    "balanced": false,
+    "patience": 8,
+    "out": "results"
+  },
+  "best_epoch": 25,
+  "test": {
+    "qwk": 0.8955544832217475,
+    "accuracy": 0.7981818181818182,
+    "macro_f1": 0.6062649210627646,
+    "mae": 0.25272727272727274,
+    "referable_f1": 0.8991228070175439,
+    "confusion": [
+      [
+        264,
+        6,
+        1,
+        0,
+        0
+      ],
+      [
+        2,
+        27,
+        24,
+        2,
+        1
+      ],
+      [
+        1,
+        13,
+        111,
+        16,
+        9
+      ],
+      [
+        0,
+        1,
+        3,
+        5,
+        20
+      ],
+      [
+        1,
+        2,
+        5,
+        4,
+        32
+      ]
+    ]
+  },
+  "thresholds": [
+    -3.4416205768607493,
+    -0.866149783087949,
+    0.47526512259251896,
+    0.8050899314917586
+  ],
+  "learned_biases": [
+    0.2657122015953064,
+    0.2340139001607895,
+    -0.23831593990325928,
+    -0.2514877915382385
+  ],
+  "params_M": 4.01,
+  "history": []
+}

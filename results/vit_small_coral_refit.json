@@ -1,0 +1,81 @@
+{
+  "tag": "vit_small_coral_refit",
+  "args": {
+    "model": "vit_small",
+    "head": "coral_refit",
+    "data": "data/processed",
+    "cache_size": 224,
+    "epochs": 25,
+    "batch": 32,
+    "accum": 1,
+    "lr": 0.0001,
+    "wd": 0.0001,
+    "workers": 4,
+    "seed": 42,
+    "no_pretrained": false,
+    "no_amp": false,
+    "grad_ckpt": false,
+    "balanced": false,
+    "patience": 8,
+    "out": "results"
+  },
+  "best_epoch": 25,
+  "test": {
+    "qwk": 0.8903638678423872,
+    "accuracy": 0.7981818181818182,
+    "macro_f1": 0.6220107610573157,
+    "mae": 0.2581818181818182,
+    "referable_f1": 0.8898876404494382,
+    "confusion": [
+      [
+        266,
+        5,
+        0,
+        0,
+        0
+      ],
+      [
+        3,
+        29,
+        23,
+        1,
+        0
+      ],
+      [
+        1,
+        20,
+        107,
+        10,
+        12
+      ],
+      [
+        0,
+        2,
+        2,
+        8,
+        17
+      ],
+      [
+        1,
+        1,
+        10,
+        3,
+        29
+      ]
+    ]
+  },
+  "thresholds": [
+    -2.3946659578925305,
+    -0.2860303308714478,
+    0.7280188398206793,
+    1.1098975378044686
+  ],
+  "learned_biases": [
+    0.08520868420600891,
+    0.07512382417917252,
+    -0.07873455435037613,
+    -0.08370885998010635
+  ],
+  "params_M": 21.67,
+  "history": []
+}
