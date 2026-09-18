@@ -42,7 +42,9 @@ if __name__ == "__main__":
     import glob, json, sys
 
     d = sys.argv[1] if len(sys.argv) > 1 else "results"
-    files = sorted(glob.glob(f"{d}/*.json"))
-    if not files:
-        sys.exit(f"no result files in {d}/")
-    print(comparison_table([json.load(open(p)) for p in files]))
+    # skips vram_bench.json and any file that is not a finished run
+    runs = [r for r in (json.load(open(f)) for f in sorted(glob.glob(f"{d}/*.json")))
+            if "test" in r]
+    if not runs:
+        sys.exit(f"no run results in {d}/")
+    print(comparison_table(runs))
