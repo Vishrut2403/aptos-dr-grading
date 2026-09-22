@@ -114,3 +114,7 @@ reports/figures/fig1_pipeline_stages.png
 reports/figures/fig2_camera_normalisation.png
 reports/*_DRAFT_*.docx
 reports/*_DRAFT_*.pdf
+
+# Report sources and builds carry registration numbers and the MAHE logo; the repo is public
+tex/
+reports/PartB_Interim.*
