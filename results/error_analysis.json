@@ -1,0 +1,132 @@
+{
+  "model": "effnet_b0",
+  "head": "softmax",
+  "overall": {
+    "qwk": 0.879533654437855,
+    "accuracy": 0.8309090909090909,
+    "macro_f1": 0.6561530492045964,
+    "mae": 0.23272727272727273,
+    "referable_f1": 0.9090909090909091,
+    "confusion": [
+      [
+        268,
+        1,
+        2,
+        0,
+        0
+      ],
+      [
+        8,
+        27,
+        21,
+        0,
+        0
+      ],
+      [
+        3,
+        11,
+        133,
+        0,
+        3
+      ],
+      [
+        1,
+        0,
+        8,
+        9,
+        11
+      ],
+      [
+        1,
+        2,
+        18,
+        3,
+        20
+      ]
+    ]
+  },
+  "per_grade": [
+    {
+      "grade": "0 No DR",
+      "n": 271,
+      "recall": 0.988929889298893,
+      "mean_pred": 0.01845018450184502,
+      "under": 0,
+      "over": 3
+    },
+    {
+      "grade": "1 Mild",
+      "n": 56,
+      "recall": 0.48214285714285715,
+      "mean_pred": 1.2321428571428572,
+      "under": 8,
+      "over": 21
+    },
+    {
+      "grade": "2 Moderate",
+      "n": 150,
+      "recall": 0.8866666666666667,
+      "mean_pred": 1.9266666666666667,
+      "under": 14,
+      "over": 3
+    },
+    {
+      "grade": "3 Severe",
+      "n": 29,
+      "recall": 0.3103448275862069,
+      "mean_pred": 3.0,
+      "under": 9,
+      "over": 11
+    },
+    {
+      "grade": "4 Proliferative",
+      "n": 44,
+      "recall": 0.45454545454545453,
+      "mean_pred": 2.8863636363636362,
+      "under": 24,
+      "over": 0
+    }
+  ],
+  "referral": {
+    "n_referable": 223,
+    "missed": 18,
+    "missed_rate": 0.08071748878923767,
+    "false_alarm": 23,
+    "sensitivity": 0.9192825112107623,
+    "specificity": 0.9296636085626911
+  },
+  "sharpness": [
+    {
+      "quartile": 1,
+      "n": 138,
+      "accuracy": 0.8115942028985508,
+      "median_blur": 19.77340251127034,
+      "frac_grade0": 0.3695652173913043
+    },
+    {
+      "quartile": 2,
+      "n": 137,
+      "accuracy": 0.6934306569343066,
+      "median_blur": 42.97121895379567,
+      "frac_grade0": 0.17518248175182483
+    },
+    {
+      "quartile": 3,
+      "n": 137,
+      "accuracy": 0.8686131386861314,
+      "median_blur": 63.58332246104377,
+      "frac_grade0": 0.5693430656934306
+    },
+    {
+      "quartile": 4,
+      "n": 138,
+      "accuracy": 0.9492753623188406,
+      "median_blur": 79.44317997059093,
+      "frac_grade0": 0.855072463768116
+    }
+  ],
+  "sharpness_gap": {
+    "median_blur_correct": 54.72932674220378,
+    "median_blur_wrong": 42.79913918874573
+  }
+}
