@@ -28,6 +28,7 @@ def get_args():
     p.add_argument("--wd", type=float, default=1e-4)
     p.add_argument("--workers", type=int, default=4)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--split-seed", type=int, default=42, help="fixed, so every training seed sees one test set")
     p.add_argument("--no-pretrained", action="store_true")
     p.add_argument("--no-amp", action="store_true")
     p.add_argument("--grad-ckpt", action="store_true")
@@ -73,9 +74,9 @@ def main():
 
     npy = os.path.join(a.data, f"images_{a.cache_size}.npy")
     csv = os.path.join(a.data, "labels.csv")
-    split_path = os.path.join(a.data, f"split_seed{a.seed}.json")
+    split_path = os.path.join(a.data, f"split_seed{a.split_seed}.json")
     if not os.path.exists(split_path):
-        make_split(csv, split_path, seed=a.seed)
+        make_split(csv, split_path, seed=a.split_seed)
     split = json.load(open(split_path))
 
     model, img_size = build(a.model, head_type=a.head, pretrained=not a.no_pretrained)
@@ -95,12 +96,36 @@ def main():
     # fp16 is a CUDA-only win here; on CPU it just warns and disables itself
     scaler = torch.amp.GradScaler("cuda", enabled=cuda and not a.no_amp)
 
-    tag = f"{a.model}_{a.head}" + ("_bal" if a.balanced else "")
+    tag = f"{a.model}_{a.head}" + ("_bal" if a.balanced else "") + (f"_s{a.seed}" if a.seed != 42 else "")
     os.makedirs(a.out, exist_ok=True)
     ckpt = os.path.join(a.out, f"{tag}.pt")
 
-    best_qwk, best_epoch, history = -1.0, -1, []
-    for ep in range(a.epochs):
+    # full training state, saved every epoch so an interrupted run picks up where it stopped
+    last = os.path.join(a.out, f"{tag}_last.pt")
+    # every flag that changes the numbers; resuming across a change to any of them would mix two runs
+    same = ("model", "head", "data", "cache_size", "epochs", "batch", "accum", "lr", "wd",
+            "seed", "split_seed", "no_pretrained", "no_amp", "balanced", "patience")
+
+    best_qwk, best_epoch, history, start = -1.0, -1, [], 0
+    if os.path.exists(last):
+        st = torch.load(last, map_location="cpu", weights_only=False)
+        diff = [k for k in same if st["args"].get(k) != vars(a).get(k)]
+        if diff:
+            raise SystemExit(f"{last} was saved with different {diff}; delete it to start fresh")
+        model.load_state_dict(st["model"])
+        opt.load_state_dict(st["opt"])
+        sched.load_state_dict(st["sched"])
+        scaler.load_state_dict(st["scaler"])
+        torch.set_rng_state(st["rng_torch"])
+        np.random.set_state(st["rng_np"])
+        if cuda:
+            torch.cuda.set_rng_state_all(st["rng_cuda"])
+        best_qwk, best_epoch, history, start = st["best_qwk"], st["best_epoch"], st["history"], st["epoch"] + 1
+        print(f"resuming {tag} at epoch {start}, best val qwk {best_qwk:.4f} from epoch {best_epoch}")
+
+    for ep in range(start, a.epochs):
+        if ep - best_epoch > a.patience:  # it had already early-stopped before the interruption
+            break
         t0 = time.perf_counter()
         tr_loss, tr_y, tr_p = run_epoch(model, loaders["train"], a.head, device, opt, scaler, cw, a.accum)
         va_loss, va_y, va_p = run_epoch(model, loaders["val"], a.head, device, scaler=scaler)
@@ -117,7 +142,16 @@ def main():
         if va_m["qwk"] > best_qwk:
             best_qwk, best_epoch = va_m["qwk"], ep
             torch.save({"model": model.state_dict(), "args": vars(a), "val": va_m}, ckpt)
-        elif ep - best_epoch >= a.patience:
+
+        # write then rename, so a kill during the save cannot leave a half-written checkpoint
+        torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(),
+                    "scaler": scaler.state_dict(), "epoch": ep, "best_qwk": best_qwk,
+                    "best_epoch": best_epoch, "history": history, "args": vars(a),
+                    "rng_torch": torch.get_rng_state(), "rng_np": np.random.get_state(),
+                    "rng_cuda": torch.cuda.get_rng_state_all() if cuda else None}, last + ".tmp")
+        os.replace(last + ".tmp", last)
+
+        if ep - best_epoch >= a.patience:
             print(f"early stop: no val QWK improvement for {a.patience} epochs")
             break
 
@@ -132,6 +166,8 @@ def main():
               "peak_MiB": round(torch.cuda.max_memory_allocated() / 2**20, 1) if device == "cuda" else None}
     with open(os.path.join(a.out, f"{tag}.json"), "w") as f:
         json.dump(result, f, indent=2)
+    if os.path.exists(last):
+        os.remove(last)  # finished; the results JSON is now what marks this run as done
 
     print(f"\nTEST  qwk {te_m['qwk']:.4f}  acc {te_m['accuracy']:.4f}  "
           f"macroF1 {te_m['macro_f1']:.4f}  MAE {te_m['mae']:.3f}  refF1 {te_m['referable_f1']:.4f}")
