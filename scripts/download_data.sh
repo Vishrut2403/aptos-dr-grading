@@ -87,4 +87,4 @@ else:
 PY
 
 echo
-echo "Next: .venv/bin/python -m src.preprocess --raw $DEST --out data/processed --size 320"
+echo "Next: .venv/bin/python -m src.preprocess --raw $DEST --out data/processed --size 224"
