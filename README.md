@@ -1,162 +1,173 @@
-# Diabetic Retinopathy Severity Grading
+# Separating Architecture from Pretraining in Diabetic Retinopathy Grading
 
-We compare four architecture families on
-APTOS 2019. Everything goes through the same preprocessing, the same
-train/val/test split, the same optimiser and the same metrics, so the model is
-the only thing that changes between runs.
+ICT 4442 Deep Learning mini project, Team G3. A controlled comparison of four
+backbones for five-grade diabetic retinopathy (DR) grading on APTOS 2019, each
+trained with three output heads. Every run shares the same preprocessing, the
+same stratified split, the same schedule and the same metrics, and the backbones
+are ordered so that each step changes one thing:
 
-| Model | Family | Pretrained |
-|---|---|---|
-| `mlp` | Fully connected baseline | no |
-| `cnn_scratch` | Convolutional | no |
-| `effnet_b0` | Convolutional | ImageNet |
-| `vit_small` | Attention / Transformer | ImageNet |
+| Model | Family | Pretrained | What the step from the previous model adds |
+|---|---|---|---|
+| `mlp` | Fully connected | no | (baseline) |
+| `cnn_scratch` | VGG-style CNN | no | convolution |
+| `effnet_b0` | EfficientNet-B0 | ImageNet-1k | pretraining |
+| `vit_small` | ViT-S/16 | ImageNet-21k | attention instead of convolution |
 
-## Setup
+Heads: `softmax` (5 classes, cross-entropy), `regress` (one score, MSE) and
+`coral` (CORAL ordinal head, four rank-consistent binary tasks).
+
+## Results
+
+Test set of 550 images; quadratic weighted kappa (QWK) with 95% bootstrap
+intervals, and the regression head retrained with three seeds on the same split.
+
+| Backbone | Best head | Test QWK [95% CI] | Regression, 3 seeds |
+|---|---|---|---|
+| EfficientNet-B0 | CORAL, refitted | **0.8956** [0.865, 0.921] | 0.8737 ± 0.0117 |
+| ViT-S/16 | Regression | 0.8922 [0.858, 0.919] | **0.8896 ± 0.0047** |
+| CNN (scratch) | Regression | 0.8785 [0.855, 0.900] | 0.8611 ± 0.0180 |
+| MLP | Regression | 0.6174 [0.571, 0.663] | 0.6065 ± 0.0120 |
+
+- **Spatial structure is the decisive step:** every other backbone beats the MLP
+  by about 0.26 QWK.
+- **The three deep models cannot be ranked:** the intervals of the top seven of
+  sixteen configurations overlap, and seed-to-seed swings (up to 0.036) are as
+  large as the gaps between models.
+- **Regression is the best trained head on all four backbones.** The CORAL head
+  lost everywhere because its learned thresholds collapsed; refitting only the
+  thresholds on validation data lifted EfficientNet-B0 from 0.7596 to 0.8956.
+- **Referral misses** (referable eyes, grade 2 or above, predicted 0 or 1, out of
+  223): ViT 18, CNN 19, EfficientNet-B0 27, MLP 39.
+- **Ben Graham normalisation had no measurable effect** in a controlled ablation.
+- **Image sharpness is confounded with the grade:** grade 0 photographs are much
+  sharper, and wrongly graded images are blurrier for every model.
+
+The full table of sixteen configurations is in `results/` and is printed by
+`python -m src.metrics results`.
+
+## Team
+
+| Member | Model | Also | GitHub |
+|---|---|---|---|
+| Aditya Verma | Model 1, MLP | data split, exploratory analysis | [@VermaAditya18](https://github.com/VermaAditya18) |
+| Harshit Anand | Model 2, CNN from scratch | augmentation, class weights | [@Harshitdot1106](https://github.com/Harshitdot1106) |
+| Vishrut Sachan | Model 3, EfficientNet-B0 | preprocessing, evaluation, experiments | [@Vishrut2403](https://github.com/Vishrut2403) |
+| Saurabh Sharma | Model 4, ViT-S/16 | output heads, losses, CORAL refit | [@Saurabhkiwi](https://github.com/Saurabhkiwi) |
+
+## Reproducing the results
+
+All commands run from the repository root. Results go to `results/` as JSON;
+model weights (`*.pt`) are written alongside but not committed.
+
+**1. Environment.**
 
 ```bash
 ./scripts/setup_env.sh
 ```
 
-Makes `.venv` and installs the dependencies. If you already have PyTorch it
-reuses it rather than pulling down another multi-gigabyte CUDA wheel, otherwise
-it installs everything from `requirements.txt`. It prints whether it found CUDA.
+Creates `.venv` and installs PyTorch, timm, scikit-learn, pandas and OpenCV,
+reusing an existing PyTorch install if there is one. A GPU is optional: all
+results come from one 6 GB RTX 3060 laptop GPU, and on CPU the code runs
+unchanged with mixed precision switched off (measured on 8 threads: the MLP
+trains in minutes, the other models take about 5 to 6 minutes per epoch).
 
-A GPU is optional. The reference figures in `results/vram_bench.json` come from
-a 6 GB RTX 3060 laptop GPU, where every model fits with room to spare. On CPU
-the code runs unchanged, it just turns mixed precision off by itself. Measured
-on 8 threads: the MLP trains in a couple of minutes, and the other three sit
-around 5 to 6 minutes per epoch, so a full run is roughly 3 to 5 hours. Slow
-enough that you won't want to iterate that way, fast enough to leave overnight.
-
-## Getting the data
-
-**APTOS 2019 Blindness Detection**, run by the Asia Pacific Tele-Ophthalmology
-Society with images from Aravind Eye Hospital, India. It lives on Kaggle as a
-competition dataset:
-<https://www.kaggle.com/competitions/aptos2019-blindness-detection>
-
-Free for academic use but gated, so there are two things to do in a browser
-before anything downloads.
-
-**1. Accept the data-use agreement.** Open the competition page and click
-**Late Submission**. Kaggle only shows a "Join Competition" button while a
-competition is still open and renames it afterwards, which trips people up. This
-one closed in 2019, so you're entering nothing; the click is just how Kaggle
-records that you accepted the licence on patient medical images. The API returns
-403 until you do it, and that's almost always why a download fails.
-
-**2. Log the CLI in.** Kaggle CLI 2.2+ uses a browser flow, so there's no token
-file to manage:
+**2. Data.** APTOS 2019 Blindness Detection is a Kaggle competition dataset,
+free for academic use but gated. Open
+<https://www.kaggle.com/competitions/aptos2019-blindness-detection>, click
+**Late Submission** and accept the rules (downloads fail with 403 until you do),
+then:
 
 ```bash
 .venv/bin/kaggle auth login
+./scripts/download_data.sh          # about 9 GB; prints the class counts 1805/370/999/193/295
 ```
 
-If you'd rather avoid OAuth, generate a token at
-<https://www.kaggle.com/settings/api> and either `export KAGGLE_API_TOKEN=...`
-or save it to `~/.kaggle/access_token`.
+Only the 3,662 labelled training images are used; Kaggle withholds the test labels.
 
-Then:
+**3. Preprocessing cache** (crop, resize to 224 px, Ben Graham normalisation,
+circular mask, stored as one uint8 array):
 
 ```bash
-./scripts/download_data.sh          # ~9 GB, needs ~10 GB free while it unzips
+.venv/bin/python -m src.preprocess --raw data/raw/aptos2019 --out data/processed --size 224
 ```
 
-You get `train.csv` (3,662 rows of `id_code`, `diagnosis` 0-4) and
-`train_images/`. There's also `test.csv` and `test_images/`, but Kaggle withheld
-those labels, so every split in this project comes out of the 3,662 labelled
-training images. The script prints the class distribution when it's done; it
-should be 1805 / 370 / 999 / 193 / 295.
+The split is already committed as `data/processed/split_seed42.json`
+(2,563 / 549 / 550), so every run uses the same images.
 
-Then build the cache:
+**4. The 4 × 3 grid, CORAL refit, intervals and figure.**
 
 ```bash
-.venv/bin/python -m src.preprocess --raw data/raw/aptos2019 --out data/processed --size 320
+./scripts/run_ablation.sh                         # 12 training runs, skips finished ones
+.venv/bin/python -m scripts.refit_coral           # recut the CORAL thresholds, no retraining
+.venv/bin/python -m scripts.bootstrap_ci          # 95% intervals -> results/bootstrap_ci.json
+.venv/bin/python -m scripts.make_figures --results-only
+.venv/bin/python -m src.metrics results           # the 16-configuration comparison table
 ```
 
-This crops the retinal circle out of the black border, applies Ben Graham
-illumination normalisation, and writes a single uint8 array (about 1.1 GB at
-320 px) so the dataloader doesn't end up being the bottleneck.
-
-### What else you need
-
-| Thing | Notes |
-|---|---|
-| Python 3.11+, PyTorch 2.6+ | `scripts/setup_env.sh` handles it |
-| timm, scikit-learn, pandas, OpenCV | same script |
-| ImageNet weights for EfficientNet-B0 and ViT-S/16 | timm pulls them from Hugging Face on first use, ~110 MB, no account or token needed |
-| GPU | optional. Every model was measured to fit in 6 GB, see `results/vram_bench.json` |
-| Disk | ~10 GB raw plus ~1.1 GB cache |
-| Kaggle account | you have to make this yourself, see above |
-
-Messidor-2 (1,748 independently graded fundus images) is listed in the synopsis
-as an optional external validation set. It needs a separate request form at
-<https://www.adcis.net/en/third-party/messidor2/>. Stretch goal, nothing depends
-on it.
-
-## Checking it fits, before downloading anything
+**5. Three seeds** (seeds 1 and 2 for every backbone's regression head; the
+split stays fixed at seed 42):
 
 ```bash
-.venv/bin/python -m src.vram_bench
+./scripts/run_seeds.sh
 ```
 
-Runs a forward and backward pass on synthetic batches and reports peak VRAM and
-throughput for every model and batch size. No data required.
-
-## Training
-
-Same harness for every model, only `--model` changes:
+**6. Ben Graham ablation** (a second cache without the normalisation, same split):
 
 ```bash
-.venv/bin/python -m src.train --model mlp         --head coral --epochs 40 --batch 256
-.venv/bin/python -m src.train --model cnn_scratch --head coral --epochs 40 --batch 32
-.venv/bin/python -m src.train --model effnet_b0   --head coral --epochs 25 --batch 32 --lr 3e-4
-.venv/bin/python -m src.train --model vit_small   --head coral --epochs 25 --batch 32 --lr 1e-4
+.venv/bin/python -m src.preprocess --raw data/raw/aptos2019 --out data/processed_noben --size 224 --no-ben
+cp data/processed/split_seed42.json data/processed_noben/
+.venv/bin/python -m src.train --data data/processed_noben --cache-size 224 --out results_noben --model mlp --head softmax --epochs 40 --batch 256 --lr 3e-4
+.venv/bin/python -m src.train --data data/processed_noben --cache-size 224 --out results_noben --model mlp --head regress --epochs 40 --batch 256 --lr 3e-4
+.venv/bin/python -m src.train --data data/processed_noben --cache-size 224 --out results_noben --model cnn_scratch --head softmax --epochs 40 --batch 32 --lr 3e-4
+.venv/bin/python -m src.train --data data/processed_noben --cache-size 224 --out results_noben --model effnet_b0 --head softmax --epochs 25 --batch 32 --lr 3e-4
 ```
 
-Results go to `results/<model>_<head>.json` with the full metric set and the
-per-epoch history.
+**7. Error analysis** (per-grade recall, referral misses, sharpness confound):
+
+```bash
+for m in mlp cnn_scratch effnet_b0 vit_small; do
+  .venv/bin/python -m scripts.error_analysis --model $m --head regress \
+      --out results/error_analysis_${m}_regress.json
+done
+```
+
+Training is resumable: rerunning an interrupted `src.train` command continues
+from its last completed epoch, and refuses to resume if the settings differ.
 
 ## Layout
 
 ```
 src/
-  preprocess.py      circle crop, Ben Graham normalisation, caching
-  data.py            dataset, augmentation, the one shared split
+  preprocess.py      retina crop, Ben Graham normalisation, cached uint8 array
+  data.py            dataset, augmentation, the one shared split, class weights
   models/
-    __init__.py      registry and DRModel assembly
-    heads.py         softmax / regression / CORAL heads
+    __init__.py      model registry, backbone + head assembly
+    heads.py         softmax, regression and CORAL heads
     mlp.py           Model 1, fully connected baseline
     cnn_scratch.py   Model 2, VGG-style CNN, no pretraining
-    pretrained.py    Model 3 EfficientNet-B0, Model 4 ViT-S/16
-  losses.py          loss and decoder for each head type
-  metrics.py         the shared evaluation protocol
-  train.py           the harness every model is trained with
-  vram_bench.py      memory and throughput probe
-
-scripts/             environment setup and dataset download
-results/             metrics JSON (committed); model weights (ignored)
-data/                downloaded and cached data (ignored)
-local/               not for publication (ignored)
+    pretrained.py    Model 3 EfficientNet-B0, Model 4 ViT-S/16 (timm)
+  losses.py          loss and decoder for each head
+  metrics.py         the shared evaluation protocol and comparison table
+  train.py           the training harness every model uses
+  vram_bench.py      GPU memory and throughput probe
+scripts/
+  setup_env.sh, download_data.sh       environment and data
+  run_ablation.sh, run_seeds.sh        the 4 x 3 grid and the extra seeds
+  refit_coral.py                       CORAL threshold refit
+  bootstrap_ci.py                      bootstrap confidence intervals
+  error_analysis.py                    per-grade, referral and sharpness analysis
+  eda.py, make_figures.py              exploratory analysis and report figures
+results/             metrics for every run (weights are not committed)
+results_noben/       the Ben Graham ablation runs
+reports/             exploratory analysis output and figures
+data/                raw images and caches (not committed)
 ```
 
-## What's implemented so far
+## Notes
 
-`src/train.py`, `src/models/__init__.py`, `src/vram_bench.py` and everything in
-`scripts/` are done and working. The four backbones, the heads, the losses, the
-metrics, the preprocessing and the dataset are skeletons that raise
-`NotImplementedError`. Each one has a docstring with the architecture, the
-contract it has to satisfy, and what to be ready to explain about it.
-
-Note that the model files never touch an image, they take a tensor and return a
-tensor, so you can write and test one against `torch.randn(4, 3, 224, 224)`
-before the preprocessing cache exists, and without a GPU.
-
-Accuracy metrics are hardware independent, but the `s_per_epoch` and `peak_MiB`
-fields in the results JSON are not. Prototype anywhere; the four runs that go in
-the report should all come off the same machine or the timing and memory columns
-aren't comparable.
-
-Authorship is tracked through git history, so commit under your own name. If you
-used an LLM anywhere, say so in the commit message and say where.
+- The APTOS images are patient data distributed under Kaggle's competition
+  rules. They are not redistributed here; never commit anything under `data/`.
+- Accuracy metrics are hardware independent; the timing and peak-memory fields
+  in the results JSON describe the RTX 3060 used for every reported run.
+- Claude (Anthropic) was used as a coding and drafting assistant during
+  development; the final report's AI-use declaration lists where.
