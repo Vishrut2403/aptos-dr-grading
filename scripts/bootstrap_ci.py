@@ -38,7 +38,8 @@ def main():
     rows = []
     for f in sorted(glob.glob("results/*.json")):
         d = json.load(open(f))
-        if "test" not in d:
+        # extra-seed runs (scripts/run_seeds.sh) are a separate analysis, not part of the 16-config grid
+        if "test" not in d or d["args"].get("seed", 42) != 42:
             continue
         point, (lo, hi), sd = ci(d["test"]["confusion"], n_boot, rng)
         rows.append((d["args"]["model"], d["args"]["head"], point, lo, hi, sd))

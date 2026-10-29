@@ -42,9 +42,9 @@ if __name__ == "__main__":
     import glob, json, sys
 
     d = sys.argv[1] if len(sys.argv) > 1 else "results"
-    # skips vram_bench.json and any file that is not a finished run
+    # skips vram_bench.json, any file that is not a finished run, and the extra-seed runs
     runs = [r for r in (json.load(open(f)) for f in sorted(glob.glob(f"{d}/*.json")))
-            if "test" in r]
+            if "test" in r and r["args"].get("seed", 42) == 42]
     if not runs:
         sys.exit(f"no run results in {d}/")
     print(comparison_table(runs))
